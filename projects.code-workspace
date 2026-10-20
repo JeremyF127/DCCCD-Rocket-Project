@@ -1,0 +1,40 @@
+{
+	"folders": [
+		{
+			"path": "../../../python projects"
+		},
+		{
+			"name": "Test",
+			"path": "../Test"
+		},
+		{
+			"name": "7 SEGMENT LED",
+			"path": "../7 SEGMENT LED"
+		},
+		{
+			"name": "Webpage",
+			"path": "."
+		},
+		{
+			"name": "TESTING GROUNDS FOR WROOM",
+			"path": "../TESTING GROUNDS FOR WROOM"
+		},
+		{
+			"name": "Inland Testing Ground",
+			"path": "../Inland Testing Ground"
+		},
+		{
+			"name": "WEBPAGE ORIGINAL",
+			"path": "../WEBPAGE ORIGINAL"
+		},
+		{
+			"name": "Motor Control Demo",
+			"path": "../Motor Control Demo"
+		},
+		{
+			"name": "Cs Portion of Code",
+			"path": "../Cs Portion of Code"
+		}
+	],
+	"settings": {}
+}
