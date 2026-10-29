@@ -86,14 +86,24 @@ app.innerHTML = `
           <p class="sensor-caption">AMBIENT AIR</p>
         </article>
 
-        <article class="panel relay-panel">
+        <article class="panel relay-panel pressure-relay-panel">
           <div class="panel-heading">
-            <div class="panel-label"><span class="sensor-icon relay-icon"><i data-lucide="power"></i></span><span>RELAY CONTROL</span></div>
+            <div class="panel-label"><span class="sensor-icon relay-icon"><i data-lucide="power"></i></span><span>PRESSURE RELAY</span></div>
             <span class="micro-tag">GPIO 45</span>
           </div>
           <div class="relay-state-row"><div><p class="relay-kicker">OUTPUT STATE</p><h2 id="relayValue">OFF</h2></div><span class="relay-indicator" id="relayIndicator"></span></div>
           <button class="relay-button" id="relayButton" type="button"><i data-lucide="power"></i><span id="relayButtonText">Energize relay</span><i class="button-arrow" data-lucide="arrow-up-right"></i></button>
-          <p class="relay-footnote">Switches the test-stand relay output.</p>
+          <p class="relay-footnote">Controls the pressure relay output.</p>
+        </article>
+
+        <article class="panel relay-panel release-relay-panel">
+          <div class="panel-heading">
+            <div class="panel-label"><span class="sensor-icon relay-icon"><i data-lucide="power"></i></span><span>RELEASE RELAY</span></div>
+            <span class="micro-tag">GPIO 48</span>
+          </div>
+          <div class="relay-state-row"><div><p class="relay-kicker">OUTPUT STATE</p><h2 id="releaseRelayValue">OFF</h2></div><span class="relay-indicator" id="releaseRelayIndicator"></span></div>
+          <button class="relay-button" id="releaseRelayButton" type="button"><i data-lucide="power"></i><span id="releaseRelayButtonText">Energize relay</span><i class="button-arrow" data-lucide="arrow-up-right"></i></button>
+          <p class="relay-footnote">Controls the release relay output.</p>
         </article>
       </section>
 
@@ -195,6 +205,9 @@ const elements = {
   relayValue: document.querySelector("#relayValue"),
   relayIndicator: document.querySelector("#relayIndicator"),
   relayButtonText: document.querySelector("#relayButtonText"),
+  releaseRelayValue: document.querySelector("#releaseRelayValue"),
+  releaseRelayIndicator: document.querySelector("#releaseRelayIndicator"),
+  releaseRelayButtonText: document.querySelector("#releaseRelayButtonText"),
   toast: document.querySelector("#toast"),
   motorState: document.querySelector("#motorState"),
   motorHelp: document.querySelector("#motorHelp"),
@@ -363,44 +376,57 @@ function updateHumidity(rawValue) {
   elements.humidityCondition.textContent = value < 30 ? "DRY" : value > 60 ? "HUMID" : "COMFORTABLE";
 }
 
-function updateRelay(rawValue) {
+function updateRelay(rawValue, valueElement, indicatorElement, buttonTextElement) {
   if (!rawValue) return;
   const isOn = rawValue.trim().toUpperCase() === "ON";
-  elements.relayValue.textContent = isOn ? "ON" : "OFF";
-  elements.relayValue.classList.toggle("relay-on", isOn);
-  elements.relayIndicator.classList.toggle("relay-indicator-on", isOn);
-  elements.relayButtonText.textContent = isOn ? "De-energize relay" : "Energize relay";
+  valueElement.textContent = isOn ? "ON" : "OFF";
+  valueElement.classList.toggle("relay-on", isOn);
+  indicatorElement.classList.toggle("relay-indicator-on", isOn);
+  buttonTextElement.textContent = isOn ? "De-energize relay" : "Energize relay";
 }
 
 async function refreshTelemetry() {
   if (isDevelopment && !configuredTarget) return;
-  const [pot, degree, temperature, humidity, relay, motorStatus] = await Promise.all([
+  const [pot, degree, temperature, humidity, pressureRelay, releaseRelay, motorStatus] = await Promise.all([
     readEndpoint("/pot"),
     readEndpoint("/degree"),
     readEndpoint("/temp"),
     readEndpoint("/humidity"),
-    readEndpoint("/relayState"),
+    readEndpoint("/pressureRelayState"),
+    readEndpoint("/releaseRelayState"),
     readEndpoint("/motorStatus"),
   ]);
-  const responses = [pot, degree, temperature, humidity, relay, motorStatus];
+  const responses = [pot, degree, temperature, humidity, pressureRelay, releaseRelay, motorStatus];
   setConnection(responses.some((value) => value !== null));
   if (pot !== null) elements.potValue.textContent = pot.trim();
   if (motorStatus !== null) updateMotorStatus(motorStatus);
   else if (degree !== null) updateAngle(degree);
   if (temperature !== null) updateTemperature(temperature);
   if (humidity !== null) updateHumidity(humidity);
-  if (relay !== null) updateRelay(relay);
+  if (pressureRelay !== null) {
+    updateRelay(pressureRelay, elements.relayValue, elements.relayIndicator, elements.relayButtonText);
+  }
+  if (releaseRelay !== null) {
+    updateRelay(releaseRelay, elements.releaseRelayValue, elements.releaseRelayIndicator, elements.releaseRelayButtonText);
+  }
 }
 
 document.querySelector("#refreshButton").addEventListener("click", refreshTelemetry);
-document.querySelector("#relayButton").addEventListener("click", async () => {
-  const response = await readEndpoint("/relay");
-  if (response === null) {
-    showToast("Relay command failed. Check the device connection.", true);
-    return;
+async function toggleRelay(path, relayName) {
+  try {
+    await sendCommand(path);
+    await refreshTelemetry();
+    showToast(`${relayName} command sent.`);
+  } catch (error) {
+    showToast(`Could not control ${relayName.toLowerCase()}: ${error.message}`, true);
   }
-  await refreshTelemetry();
-  showToast("Relay command sent.");
+}
+
+document.querySelector("#relayButton").addEventListener("click", () => {
+  toggleRelay("/pressureRelay", "Pressure relay");
+});
+document.querySelector("#releaseRelayButton").addEventListener("click", () => {
+  toggleRelay("/releaseRelay", "Release relay");
 });
 
 elements.targetForm.addEventListener("submit", async (event) => {

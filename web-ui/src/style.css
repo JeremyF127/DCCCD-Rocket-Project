@@ -159,12 +159,13 @@ h1 span { color: #7d877d; font-weight: 400; }
   .topbar { padding: 0 24px; }
   .topbar-center { display: none; }
   .dashboard { padding-top: 38px; }
-  .instrument-grid { grid-template-columns: minmax(0, 1.2fr) minmax(190px, 1fr); grid-template-rows: 250px 218px 210px; }
+  .instrument-grid { grid-template-columns: minmax(0, 1.2fr) minmax(190px, 1fr); grid-template-rows: 250px 218px 210px 210px; }
   .angle-panel { grid-row: 1 / span 2; }
   .relay-panel { grid-column: 1 / span 2; }
   .sensor-panel { min-width: 0; }
   .humidity-panel { grid-column: 2; grid-row: 2; }
-  .relay-panel { grid-row: 3; }
+  .pressure-relay-panel { grid-row: 3; }
+  .release-relay-panel { grid-row: 4; }
   .motor-controls { flex-wrap: wrap; }
   .target-form { flex-basis: 100%; }
 }
@@ -178,7 +179,7 @@ h1 span { color: #7d877d; font-weight: 400; }
   .heading-note { max-width: 220px; font-size: 12px; }
   .refresh-button { width: 38px; justify-content: center; padding: 0; }
   .refresh-button span { display: none; }
-  .instrument-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 265px 192px 192px 203px; gap: 9px; }
+  .instrument-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 265px 192px 203px 203px; gap: 9px; }
   .angle-panel { grid-column: 1 / span 2; grid-row: 1; padding: 17px 17px 15px; }
   .angle-readout { margin-top: 19px; }
   .angle-value { font-size: 70px; }
@@ -199,7 +200,9 @@ h1 span { color: #7d877d; font-weight: 400; }
   .sensor-baseline { margin-top: 13px; }
   .humidity-track { margin-top: 19px; }
   .humidity-panel .sensor-secondary { margin-top: 12px; }
-  .relay-panel { grid-column: 1 / span 2; grid-row: 4; padding: 15px 17px; }
+  .relay-panel { grid-column: 1 / span 2; padding: 15px 17px; }
+  .pressure-relay-panel { grid-row: 3; }
+  .release-relay-panel { grid-row: 4; }
   .relay-state-row { margin-top: 13px; }
   .relay-button { margin-top: 10px; }
   .bottom-bar { align-items: flex-start; flex-direction: column; gap: 10px; padding: 12px; }

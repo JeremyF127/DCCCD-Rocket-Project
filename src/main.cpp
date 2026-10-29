@@ -9,22 +9,25 @@
 #include <LittleFS.h>
 
 #define DHT11_PIN 6   //Pin locations
-#define HORI_PIN 4
-#define VERT_PIN 5
+#define HORI_PIN 4   // rotation potentiometer
+#define VERT_PIN 5 
 #define SDA 21
 #define SCL 20
-#define RELAY_PIN 45
+#define PRESSURE_RELAY_PIN 9
+#define RELEASE_RELAY_PIN 10
 
-const int ENA = 17;
-const int IN1 = 16;
-const int IN2 = 15;
+const int ENA = 18;
+const int IN1 = 8;
+const int IN2 = 3;
 
 const int PWM_CHANNEL = 0;
 const int PWM_FREQUENCY = 1000;
 const int PWM_RESOLUTION = 8;
 
 const int MAX_SPEED = 255;
-const int MIN_SPEED = 70;
+const int POST_STARTUP_MAX_SPEED = 175;
+const int MIN_SPEED = 175;
+const unsigned long MOTOR_STARTUP_BOOST_MS = 300;
 const float POSITION_DEADBAND = 1.0;
 const float SLOWDOWN_RANGE = 20.0;
 const float MIN_ANGLE = -100.0;
@@ -62,7 +65,8 @@ float tempC;
 float tempF; 
 float humidity;
 int x = 0;
-bool relayState = LOW;
+bool pressureRelayState = LOW;
+bool releaseRelayState = LOW;
 float currentDegree = 0;
 int potValueMin = 0;
 int potValueMax = 0;
@@ -102,19 +106,24 @@ void handlePot(){
     server.send(200, "text/plain", String(potValue));
 }
 
-void handleRelay(){
-     relayState = !relayState;
-     digitalWrite(RELAY_PIN, relayState);
-    server.send(200, "text/plain", relayState ? "ON" : "OFF");
+void handlePressureRelay(){
+     pressureRelayState = !pressureRelayState;
+     digitalWrite(PRESSURE_RELAY_PIN, pressureRelayState);
+    server.send(200, "text/plain", pressureRelayState ? "ON" : "OFF");
 }
 
-void handleRelayState(){
-    if(relayState == LOW){
-        server.send(200, "text/plain", "OFF");
-    }
-    if(relayState == HIGH){
-        server.send(200, "text/plain", "ON");
-    }
+void handlePressureRelayState(){
+    server.send(200, "text/plain", pressureRelayState ? "ON" : "OFF");
+}
+
+void handleReleaseRelay(){
+     releaseRelayState = !releaseRelayState;
+     digitalWrite(RELEASE_RELAY_PIN, releaseRelayState);
+    server.send(200, "text/plain", releaseRelayState ? "ON" : "OFF");
+}
+
+void handleReleaseRelayState(){
+    server.send(200, "text/plain", releaseRelayState ? "ON" : "OFF");
 }
 
 int readPotADC() {
@@ -202,14 +211,14 @@ int calculateMotorSpeed(float error) {
     float absoluteError = abs(error);
 
     if (absoluteError >= SLOWDOWN_RANGE) {
-        return MAX_SPEED;
+        return POST_STARTUP_MAX_SPEED;
     }
 
     float ratio = (absoluteError - POSITION_DEADBAND) / (SLOWDOWN_RANGE - POSITION_DEADBAND);
     ratio = constrain(ratio, 0.0f, 1.0f);
 
-    float speed = MIN_SPEED + ratio * (MAX_SPEED - MIN_SPEED);
-    return constrain((int)speed, MIN_SPEED, MAX_SPEED);
+    float speed = MIN_SPEED + ratio * (POST_STARTUP_MAX_SPEED - MIN_SPEED);
+    return constrain((int)speed, MIN_SPEED, POST_STARTUP_MAX_SPEED);
 }
 
 void updateMotor() {
@@ -251,7 +260,9 @@ void updateMotor() {
         return;
     }
 
-    int speed = calculateMotorSpeed(error);
+    int speed = millis() - movementStartTime < MOTOR_STARTUP_BOOST_MS
+        ? MAX_SPEED
+        : calculateMotorSpeed(error);
 
     if (error > 0) {
         motorClockwise(speed);
@@ -491,9 +502,12 @@ void setup()
 
     server.on("/humidity", handleHumidity);
 
-    server.on("/relay", handleRelay);  //relay button
-
-    server.on("/relayState", handleRelayState); //checks for current relay state
+    server.on("/relay", handlePressureRelay);  //legacy pressure relay control
+    server.on("/pressureRelay", handlePressureRelay);
+    server.on("/relayState", handlePressureRelayState);  //legacy pressure relay state
+    server.on("/pressureRelayState", handlePressureRelayState);
+    server.on("/releaseRelay", handleReleaseRelay);
+    server.on("/releaseRelayState", handleReleaseRelayState);
     server.on("/calibrate", handleCalibrate);
     server.on("/calibration/reset", handleResetCalibration);
     server.on("/stop", handleStopMotor);
@@ -511,7 +525,10 @@ void setup()
     display.clearDisplay();
     display.display();
 
-    pinMode(RELAY_PIN, OUTPUT);
+    pinMode(PRESSURE_RELAY_PIN, OUTPUT);
+    digitalWrite(PRESSURE_RELAY_PIN, pressureRelayState);
+    pinMode(RELEASE_RELAY_PIN, OUTPUT);
+    digitalWrite(RELEASE_RELAY_PIN, releaseRelayState);
     pinMode(IN1, OUTPUT);
     pinMode(IN2, OUTPUT);
     ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
